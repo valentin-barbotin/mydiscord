@@ -46,6 +46,8 @@ android {
     }
 }
 
+val ktor_version: String by project
+
 dependencies {
 
     implementation("androidx.core:core-ktx:1.10.1")
@@ -65,4 +67,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("dev.kord:kord-core:0.13.0")
     implementation("com.michael-bull.kotlin-result:kotlin-result:1.1.18")
+    implementation("io.ktor:ktor-client-core:$ktor_version")
+    implementation("io.ktor:ktor-client-cio:$ktor_version")
 }
