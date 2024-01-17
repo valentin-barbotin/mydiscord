@@ -48,6 +48,11 @@ android {
 
 val ktor_version: String by project
 
+val koin_version: String by project
+val koin_android_version: String by project
+val koin_core_coroutines_version: String by project
+val koin_ktor_version: String by project
+
 dependencies {
 
     implementation("androidx.core:core-ktx:1.10.1")
@@ -69,4 +74,8 @@ dependencies {
     implementation("com.michael-bull.kotlin-result:kotlin-result:1.1.18")
     implementation("io.ktor:ktor-client-core:$ktor_version")
     implementation("io.ktor:ktor-client-cio:$ktor_version")
+    implementation("io.insert-koin:koin-core:$koin_version")
+    implementation("io.insert-koin:koin-core-coroutines:$koin_core_coroutines_version")
+    implementation("io.insert-koin:koin-android:$koin_android_version")
+    implementation("io.insert-koin:koin-ktor:$koin_ktor_version")
 }
