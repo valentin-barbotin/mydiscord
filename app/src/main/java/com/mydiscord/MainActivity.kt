@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.mydiscord.ui.theme.MydiscordTheme
+import dev.kord.core.Kord
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,6 +24,15 @@ class MainActivity : ComponentActivity() {
                     Greeting("Android")
                 }
             }
+        }
+
+        runBlocking {
+            val token = "MTE5NzI4NTg2NDc3OTMwNTA2Mg.GH2OyU.F4T9LBUf0a6bo-5v7iOrQJU_SeFLN7AnGWyS1I"
+            val kord = Kord(token)
+            println(kord.getSelf().username)
+            //val client = Client();
+
+            //client.login()
         }
     }
 }
