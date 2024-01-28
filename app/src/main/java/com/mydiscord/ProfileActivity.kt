@@ -126,7 +126,6 @@ private fun UserImages(modifier: Modifier = Modifier, avatar: String = "", banne
             Modifier
                 .height(60.dp)
                 .fillMaxWidth()
-
         )
         Surface(
             modifier = Modifier

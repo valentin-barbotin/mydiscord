@@ -59,6 +59,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // selfbot
+    // MTE5NzMwMTgxODUzNTk3NzE1MA.G16fLj.oJ4j-gVoaRLscG0xCvBlzN4HMGXmGd5NJrxO8c
+
+    // mydiiscord (bot)
+    // MTE5NzI4NTg2NDc3OTMwNTA2Mg.GH2OyU.F4T9LBUf0a6bo-5v7iOrQJU_SeFLN7AnGWyS1I
     private fun login(token: String = "MTE5NzI4NTg2NDc3OTMwNTA2Mg.GH2OyU.F4T9LBUf0a6bo-5v7iOrQJU_SeFLN7AnGWyS1I") {
         lifecycleScope.launch {
             val auth = this@MainActivity.mainViewModel.loginWithToken(token)
@@ -69,12 +74,17 @@ class MainActivity : ComponentActivity() {
 
             auth.onSuccess {
                 println("Logged in")
-                openProfileActivity()
+                openGuildsActivity()
+            //openProfileActivity()
             }
         }
     }
 
     private fun openProfileActivity() {
         startActivity(Intent(this@MainActivity, ProfileActivity::class.java))
+    }
+
+    private fun openGuildsActivity() {
+        startActivity(Intent(this@MainActivity, GuildsActivity::class.java))
     }
 }
