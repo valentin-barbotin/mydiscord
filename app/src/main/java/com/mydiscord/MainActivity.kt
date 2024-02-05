@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                             login()
                             //login(token)
                         },
-                            enabled = givenToken.value.text.isNotEmpty()
+                            //enabled = givenToken.value.text.isNotEmpty()
                         ) {
                             Text("Login")
                         }

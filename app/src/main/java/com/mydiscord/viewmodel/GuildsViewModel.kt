@@ -1,89 +1,89 @@
 package com.mydiscord.viewmodel
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mydiscord.model.Message
 import com.mydiscord.repositories.KordRepository
 import dev.kord.common.entity.ChannelType
 import dev.kord.common.entity.DiscordMessage
-import dev.kord.core.Kord
-import dev.kord.core.behavior.edit
+import dev.kord.common.entity.Snowflake
 import dev.kord.core.entity.Guild
 import dev.kord.core.entity.channel.TextChannel
 import dev.kord.core.entity.channel.TopGuildChannel
+import dev.kord.core.event.message.MessageCreateEvent
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 
 class GuildsViewModel(
     private val kordRepo: KordRepository
 ): ViewModel() {
 
-    private var selectedGuild: Guild? = null
+    private var selectedGuild: MutableState<Guild?> = mutableStateOf(null)
 
-    val channels = MutableStateFlow(emptyList<TopGuildChannel>())
-    val guilds = MutableStateFlow(emptyList<Guild>())
-    val selectedChannel = MutableStateFlow<TopGuildChannel?>(null)
-    val channelMessages = MutableStateFlow(emptyList<Message>())
-    private var switchChannelJob = MutableStateFlow<Job?>(null)
-
-    fun switchInProgress() = this.switchChannelJob.value?.isActive ?: false
-
-    suspend fun updateGuilds() {
-        guilds.value = this.kordRepo.getGuilds().toList().sorted()
-    }
-
-    private suspend fun updateChannels() {
-        val guild = this.getGuild()
-        
-        if (guild != null) {
-            channels.value = guild.channels.toList()
-        }
-    }
+    var guilds = mutableStateListOf<Guild>()
+    var channels = mutableStateListOf<TopGuildChannel>()
+    val avatars = hashMapOf<Snowflake, String>()
+    private var switchChannelJob = mutableStateOf<Job?>(null)
 
     suspend fun switchGuild(guild: Guild) {
-        this.selectedGuild = guild
+        this.switchChannelJob.value.run { this?.cancel() }
+        this.selectedGuild.value = guild
         this.updateChannels()
+        //this.getAvatars()
     }
 
-    fun switchChannel(channel: TopGuildChannel): Boolean {
-        when (channel.type) {
-            is ChannelType.GuildText -> {
-                this.switchChannelJob.value.run { this?.cancel() }
+    /*private fun getAvatars() {
+        val guild = this.getGuild().value
 
-                this.switchChannelJob.value = viewModelScope.launch {
-                    this@GuildsViewModel.channelMessages.value = emptyList()
-                    this@GuildsViewModel.channelMessages.value = this@GuildsViewModel.kordRepo.getChannelMessages(channel.id).map {
-                        println("Message: ${it.timestamp}")
-                        Message(
-                            it.content,
-                            it.timestamp,
-                            it.author.username,
-                            it.author.avatar
-                        )
-                    }.sortedWith(compareBy { it.date }).reversed()
+        if (guild != null) {
+            viewModelScope.launch {
+                //val members = kordRepo.getGuildMembers(guild.id)
 
-                    this@GuildsViewModel.selectedChannel.value = channel
+                //members.onEach {
+                    //val id = it.user.value?.id
+                    //val avatar = it.user.value?.avatar
+
+                    //if (id != null && avatar != null) {
+                        //this@GuildsViewModel.avatars[id] = avatar
+                    //}
+                //}
+            }
+        }
+    }*/
+
+    private suspend fun updateChannels() {
+        val guild = this.getGuild().value
+
+        if (guild != null) {
+            channels.clear()
+            channels.addAll(guild.channels.toList())
+
+            /*this.channels.forEach { channel ->
+                if (channel.type == ChannelType.GuildText) {
+                    this.kordRepo.followChannel(channel.id)
                 }
-
-                return true
-            }
-
-            else -> {
-                return false
-            }
+            }*/
         }
     }
 
-    suspend fun sendMessage(message: String, channel: TextChannel) {
-        this.kordRepo.sendMessageInChannel(message, channel)
+    fun updateGuilds() {
+        viewModelScope.launch {
+            this@GuildsViewModel.guilds.clear()
+
+            this@GuildsViewModel.guilds.addAll(
+                this@GuildsViewModel.kordRepo.getGuilds().toList()
+            )
+
+            val firstGuild = this@GuildsViewModel.guilds.firstOrNull()
+            if (this@GuildsViewModel.getGuild().value == null && firstGuild != null) {
+                this@GuildsViewModel.switchGuild(firstGuild)
+            }
+        }
     }
 
     fun getGuild() = this.selectedGuild

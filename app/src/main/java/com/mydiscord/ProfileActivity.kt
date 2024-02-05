@@ -92,9 +92,11 @@ private fun About(modifier: Modifier = Modifier) {
 @Composable
 //@Preview(showBackground = true)
 private fun Content(profileViewModel: ProfileViewModel = viewModel()) {
-    val username = profileViewModel.getUsername()
-    val avatar = profileViewModel.getAvatar()
-    val banner = avatar
+    val user = profileViewModel.getUser()
+
+    val username = user?.username ?: "Unknown"
+    val avatar = user?.avatar.toString() ?: ""
+    val banner = user?.banner.toString() ?: ""
 
     //val avatar = "https://media.discordapp.net/attachments/899987990313594880/1199666461111758878/20240124_103313.jpg?ex=65c35f75&is=65b0ea75&hm=ad0da9789cf66672e3040c2c9e46ec54d1e5e2150f6a1fbb4bb371b62dc75a58&=&format=webp&width=1078&height=1356"
     //val banner = "https://media1.tenor.com/m/wlYwELBQkI8AAAAd/mukbang-food.gif"
