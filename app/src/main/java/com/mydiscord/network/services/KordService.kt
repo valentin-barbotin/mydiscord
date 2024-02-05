@@ -1,11 +1,14 @@
 package com.mydiscord.network.services
 
 import android.os.SystemClock.sleep
+import dev.kord.common.entity.DiscordGuildMember
 import dev.kord.common.entity.DiscordMessage
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.entity.Asset
 import dev.kord.core.entity.Guild
+import dev.kord.core.entity.Message
+import dev.kord.core.entity.User
 import dev.kord.core.entity.channel.TextChannel
 import dev.kord.rest.builder.message.create.UserMessageCreateBuilder
 import kotlinx.coroutines.flow.Flow
@@ -19,20 +22,26 @@ class KordService {
         return ::kord.isInitialized
     }
 
-    suspend fun getUsername(): String {
-        if (!this.isInitialized()) {
-            throw Exception("Kord is not initialized")
-        }
+    suspend fun loginWithToken(token: String): Result<Kord> {
+        this.kord = Kord(token)
 
-        return this.kord.getSelf().username
+        return Result.success(this.kord)
     }
 
-    suspend fun getAvatar(): Asset? {
+    suspend fun getUser(): User {
         if (!this.isInitialized()) {
             throw Exception("Kord is not initialized")
         }
 
-        return this.kord.getSelf().avatar
+        return this.kord.getSelf()
+    }
+
+    suspend fun getUser(id: Snowflake): User? {
+        if (!this.isInitialized()) {
+            throw Exception("Kord is not initialized")
+        }
+
+        return this.kord.getUser(id)
     }
 
     fun getGuilds(): Flow<Guild> {
@@ -51,17 +60,19 @@ class KordService {
         return this.kord.rest.channel.getMessages(id)
     }
 
-    suspend fun loginWithToken(token: String): Result<Kord> {
-        this.kord = Kord(token)
-
-        return Result.success(this.kord)
-    }
-
-    suspend fun sendMessageInChannel(message: String, channel: TextChannel) {
+    suspend fun sendMessageInChannel(message: String, channel: TextChannel): Message {
         if (!this.isInitialized()) {
             throw Exception("Kord is not initialized")
         }
 
-        channel.createMessage(message)
+        return channel.createMessage(message)
+    }
+
+    suspend fun getGuildMembers(id: Snowflake): List<DiscordGuildMember> {
+        if (!this.isInitialized()) {
+            throw Exception("Kord is not initialized")
+        }
+
+        return this.kord.rest.guild.getGuildMembers(id)
     }
 }

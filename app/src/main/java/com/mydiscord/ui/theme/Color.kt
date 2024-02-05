@@ -9,3 +9,6 @@ val Pink80 = Color(0xFFEFB8C8)
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
+
+val DiscordDark = Color(0xFF2C2F33)
+val DiscordLight = Color(0xFF36393F)

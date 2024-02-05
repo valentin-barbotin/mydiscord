@@ -4,80 +4,59 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester.Companion.createRefs
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.lifecycleScope
 import coil.compose.AsyncImage
 import com.mydiscord.di.injectModuleDependencies
-import com.mydiscord.model.Message
+import com.mydiscord.ui.components.GuildChannelFeed
+import com.mydiscord.ui.components.GuildChannelMessages
+import com.mydiscord.ui.theme.*
 import com.mydiscord.ui.theme.MydiscordTheme
+import com.mydiscord.viewmodel.GuildViewModel
 import com.mydiscord.viewmodel.GuildsViewModel
-import dev.kord.common.entity.DiscordMessage
+import dev.kord.common.entity.ChannelType
+import dev.kord.common.entity.Snowflake
+import dev.kord.core.cache.data.MessageData
 import dev.kord.core.entity.Guild
 import dev.kord.core.entity.channel.TextChannel
 import dev.kord.core.entity.channel.TopGuildChannel
-import dev.kord.core.entity.channel.TopGuildMessageChannel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
-import okhttp3.internal.format
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import java.text.DateFormat
-import java.util.Date
-import java.util.Locale
 
 class GuildsActivity : ComponentActivity() {
     private val guildsViewModel: GuildsViewModel by viewModel()
+    private val guildViewModel: GuildViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,36 +64,35 @@ class GuildsActivity : ComponentActivity() {
         injectModuleDependencies(this@GuildsActivity)
 
         setContent {
-            MydiscordTheme {
+            MydiscordTheme(true) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     Content(
-                        guilds = guildsViewModel.guilds.collectAsState().value,
-                        channels = guildsViewModel.channels.collectAsState().value,
+                        guilds = guildsViewModel.guilds,
                         selectedGuild = guildsViewModel.getGuild(),
-                        selectedChannel = guildsViewModel.selectedChannel,
-                        channelMessages = guildsViewModel.channelMessages,
+                        selectedChannel = guildViewModel.selectedChannel,
+                        channelMessages = guildViewModel.channelMessages,
+                        channels = guildsViewModel.channels
                     )
                 }
             }
         }
 
-        lifecycleScope.launch {
-            this@GuildsActivity.guildsViewModel.updateGuilds()
-        }
+        this@GuildsActivity.guildsViewModel.updateGuilds()
     }
 
     @Composable
     @Preview(showBackground = true)
     private fun Content(
-        guilds: List<Guild> = listOf(),
-        channels: List<TopGuildChannel> = listOf(),
-        selectedGuild: Guild? = null,
-        selectedChannel: MutableStateFlow<TopGuildChannel?> = MutableStateFlow(null),
-        channelMessages: MutableStateFlow<List<Message>> = MutableStateFlow(listOf()),
+        guilds: SnapshotStateList<Guild> = mutableStateListOf(),
+        selectedGuild: MutableState<Guild?> = mutableStateOf(null),
+        selectedChannel: MutableState<TopGuildChannel?> = mutableStateOf(null),
+        channelMessages: SnapshotStateList<MessageData> = mutableStateListOf(),
+        channels: SnapshotStateList<TopGuildChannel> = mutableStateListOf()
     ) {
+        val channelOpened = remember { mutableStateOf(false) }
         Column(
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -122,28 +100,41 @@ class GuildsActivity : ComponentActivity() {
                 modifier = Modifier.
                     fillMaxWidth()
             ) {
-                val channelOpened = remember { mutableStateOf(false) }
                 if (!channelOpened.value) {
                     GuildList(guilds)
                 }
 
-                if (selectedGuild != null) {
-                    if (channelOpened.value) {
-                        val selectedChannel = selectedChannel.collectAsState().value
-                        if (selectedChannel != null) {
-                            GuildChannelFeed(
-                                channelName = selectedChannel.name,
-                                channelOpened = channelOpened,
-                                channelMessages = channelMessages,
-                            )
-                        }
-                    } else {
-                        GuildChannels(channels, selectedGuild, channelOpened, selectedChannel)
-                        GuildChannelMessages(
-                            modifier = Modifier.fillMaxHeight(),
-                            messages = channelMessages.collectAsState().value
+                if (channelOpened.value) {
+                    val selectedChannel = selectedChannel.value
+                    if (selectedChannel != null) {
+                        GuildChannelFeed(
+                            channelOpened = channelOpened,
+                            channelMessages = guildViewModel.channelMessages,
+                            selectedChannel = selectedChannel,
+                            sendMessage = guildViewModel::sendMessage,
+                            lifecycleScope = lifecycleScope
                         )
                     }
+                } else {
+                    GuildChannels(
+                        guild = selectedGuild,
+                        channelOpened = channelOpened,
+                        selectedChannel = selectedChannel,
+                        channels = channels
+                    )
+                    GuildChannelMessages(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(start = 7.dp)
+                            .clip(
+                                RoundedCornerShape(
+                                    topStart = 10.dp
+                                )
+                            )
+                        ,
+                        messages = channelMessages,
+                        avatars = guildsViewModel.avatars
+                    )
                 }
             }
         }
@@ -151,14 +142,14 @@ class GuildsActivity : ComponentActivity() {
 
     @Composable
     @Preview(showBackground = true)
-    private fun GuildList(guilds: List<Guild> = listOf()) {
+    private fun GuildList(guilds: MutableList<Guild> = mutableListOf()) {
         val imageSize = 60.dp
 
         Column(
             modifier = Modifier
+                .padding(5.dp)
                 .width(imageSize)
                 .fillMaxHeight()
-                .background(Color.Blue)
             ,
         ) {
             for (guild in guilds) {
@@ -169,7 +160,7 @@ class GuildsActivity : ComponentActivity() {
 
     @Composable
     private fun GuildItem(guild: Guild) {
-        val icon = guild.data.icon ?: "https://cdn.discordapp.com/icons/897746126772502569/8cc146043482be4eb78d522dcb25545f.webp?size=240"
+        val icon = guild.icon?.cdnUrl?.toUrl() ?: "https://cdn.discordapp.com/icons/897746126772502569/8cc146043482be4eb78d522dcb25545f.webp?size=240"
 
         Column(
             modifier = Modifier
@@ -179,7 +170,7 @@ class GuildsActivity : ComponentActivity() {
             Surface(
                 modifier = Modifier
                     .border(
-                        BorderStroke(1.dp, Color.Black),
+                        BorderStroke(0.dp, Color.Transparent),
                         CircleShape
                     ),
                 color = Color.Transparent
@@ -192,7 +183,7 @@ class GuildsActivity : ComponentActivity() {
                         .clip(CircleShape)
                         .clickable {
                             val currentGuild = this@GuildsActivity.guildsViewModel.getGuild()
-                            if (guild.id != currentGuild?.id) {
+                            if (guild.id != currentGuild.value?.id) {
                                 lifecycleScope.launch {
                                     this@GuildsActivity.guildsViewModel.switchGuild(guild)
                                 }
@@ -206,28 +197,83 @@ class GuildsActivity : ComponentActivity() {
     @Composable
     @Preview(showBackground = true)
     private fun GuildChannels(
-        channels: List<TopGuildChannel> = listOf(),
-        guild: Guild? = null,
-        channelOpened: MutableState<Boolean> = remember { mutableStateOf(false) },
-        selectedChannel: MutableStateFlow<TopGuildChannel?> = MutableStateFlow(null),
+        guild: MutableState<Guild?> = mutableStateOf(null),
+        channelOpened: MutableState<Boolean> =  mutableStateOf(false),
+        selectedChannel: MutableState<TopGuildChannel?> = mutableStateOf(null),
+        channels: SnapshotStateList<TopGuildChannel> = mutableStateListOf()
     ) {
+        val hiddenCategories = remember { mutableStateListOf<Snowflake>() }
+
         Column(
             modifier = Modifier
-                .background(Color.Red)
                 .fillMaxHeight()
+                .clip(
+                    RoundedCornerShape(
+                        topEnd = 10.dp,
+                        topStart = 35.dp
+                    )
+                )
                 .width(250.dp)
+                .background(DarkColorScheme.secondary)
+                .padding(10.dp)
         ) {
-            if (guild == null) {
-                return
+            val guild = guild.value ?: return
+
+            GuildHeader(guild.name, onClick = {
+                println("Guild settings")
+            })
+
+            val categories = HashMap<TopGuildChannel, MutableList<TopGuildChannel>>()
+
+            for (channel in channels) {
+                if (channel.type is ChannelType.GuildCategory) {
+                    categories[channel] = mutableListOf()
+                }
             }
 
             for (channel in channels) {
-                println("Channel: ${channel.name}")
-                val onclick = {
-                    channelOpened.value = this@GuildsActivity.guildsViewModel.switchChannel(channel)
+                when (channel) {
+                    is TextChannel -> {
+                        if (channel.categoryId != null) {
+                            val category = categories.keys.find { it.id == channel.categoryId }
+                            if (category != null) {
+                                categories[category]?.add(channel)
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (category in categories) {
+                GuildChannelHeader(category.key.name, onClick = {
+                    if (hiddenCategories.contains(category.key.id)) {
+                        hiddenCategories.remove(category.key.id)
+                        println("removed")
+                        println(category.key.id)
+                    } else {
+                        hiddenCategories.add(category.key.id)
+                        println("added")
+                        println(category.key.id)
+                    }
+                }, hidden = hiddenCategories.contains(category.key.id))
+
+                category.value.sortBy {
+                    it.rawPosition
                 }
 
-                GuildChannelItem(channel.name, onclick)
+                if (hiddenCategories.contains(category.key.id)) {
+                    println(category.key.id)
+                    println("hidden")
+                    continue
+                }
+
+                for (channel in category.value) {
+                    val onclick = {
+                        channelOpened.value = this@GuildsActivity.guildViewModel.switchChannel(channel)
+                    }
+
+                    GuildChannelItem(channel.name, onclick)
+                }
             }
 
             if (channels.isEmpty()) {
@@ -238,268 +284,93 @@ class GuildsActivity : ComponentActivity() {
     }
 
     @Composable
-    @Preview(showBackground = true)
+    @Preview(showBackground = false)
+    private fun GuildHeader(
+        text: String = "My guild",
+        onClick: () -> Unit = {}
+    ) {
+        Row {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.headlineSmall,
+                color = DarkColorScheme.tertiary,
+                modifier = Modifier.padding(5.dp).fillMaxWidth(0.8f)
+            )
+            IconButton(
+                onClick = onClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Guild settings",
+                    tint = DarkColorScheme.tertiary
+                )
+            }
+        }
+        Divider()
+    }
+
+    @Composable
+    @Preview(showBackground = false)
     private fun GuildChannelItem(
         text: String = "general",
         onClick: () -> Unit = {},
     ) {
         TextButton(
             onClick = onClick,
-            elevation = null,
+            //elevation = null,
             colors = ButtonDefaults.textButtonColors(
-                contentColor = Color.Black,
+                contentColor = DarkColorScheme.tertiary,
             ),
-            contentPadding = PaddingValues(0.dp),
+            contentPadding = PaddingValues(
+                start = 10.dp,
+                end = 10.dp,
+            ),
             modifier = Modifier
-                .height(22.dp)
+                .height(28.dp)
+                .fillMaxWidth()
         ) {
-            Text(text)
-        }
-    }
-
-    @Composable
-    @Preview(showBackground = true)
-    private fun GuildChannelMessages(
-        modifier: Modifier = Modifier,
-        modifierConstraint: Modifier = Modifier,
-        messages: List<Message> = listOf(),
-    ) {
-        val verticalGap = 12.dp
-        Column(modifier = modifierConstraint) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-                state = rememberLazyListState(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = verticalGap),
-                userScrollEnabled = true,
-                reverseLayout = true,
-                modifier = modifier
-                    .background(Color.Green)
+            Text(text = "#") //TODO: add icons
+            Text(
+                text = text,
+                modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-
-            ) {
-                if (messages.isEmpty()) {
-                    item {
-                        Text("No messages")
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height((-verticalGap.value).dp))
-                }
-
-                items(messages) { message ->
-                    GuildChannelMessage(message)
-                }
-            }
+                    .padding(start = 5.dp)
+            )
         }
     }
 
     @Composable
-    @Preview(showBackground = true)
-    private fun GuildChannelMessage(message: Message = Message(
-        "Hello",
-        Instant.fromEpochMilliseconds(0),
-        "author",
-        "https://cdn.discordapp.com/icons/897746126772502569/8cc146043482be4eb78d522dcb25545f.webp?size=240"
-    )) {
-        Row(
-            modifier = Modifier
-                .background(Color.Yellow)
-                .padding(5.dp)
-                .fillMaxWidth()
-        ) {
-            val locale = Locale.FRENCH
-            val date = DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(
-                Date(message.date.epochSeconds * 1000)
-            )
-            val time = DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(
-                Date(message.date.epochSeconds * 1000)
-            )
-
-            val messageDate = format("%s %s", date, time);
-
-            //Text(messageDate, modifier = Modifier.offset(10.dp, 0.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                AsyncImage(
-                    model = "https://cdn.discordapp.com/icons/897746126772502569/8cc146043482be4eb78d522dcb25545f.webp?size=240",
-                    contentDescription = "photo",
-                    Modifier
-                        .size(60.dp)
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                )
-                Column(
-                    verticalArrangement = Arrangement.Top,
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(bottom = 5.dp)
-                            .fillMaxWidth(),
-                    ) {
-                        Text(message.author)
-                        Text(messageDate)
-                    }
-                    Text(message.content)
-                }
-            }
-        }
-    }
-
-    @Composable
-    @Preview(showBackground = true)
-    private fun GuildChannelMessageInput(modifier: Modifier = Modifier) {
-        Row(
-            modifier = modifier
-                .background(Color.Yellow)
-                .padding(10.dp)
-                .defaultMinSize(minHeight = 50.dp)
-                .fillMaxWidth()
-        ) {
-            IconButton(onClick = {
-                // more
-            }) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "more",
-                    modifier = Modifier
-                        .size(20.dp)
-                )
-            }
-
-            val givenToken = remember { mutableStateOf(TextFieldValue()) }
-            TextField(
-                value = givenToken.value,
-                onValueChange = {
-                    givenToken.value = it
-                },
-                label = { Text("Enter your message") }
-            )
-            if (givenToken.value.text.isNotEmpty())
-                IconButton(onClick = {
-                    lifecycleScope.launch {
-                        val channel = this@GuildsActivity.guildsViewModel.selectedChannel.value ?: return@launch
-
-                        if (channel is TextChannel) {
-                            this@GuildsActivity.guildsViewModel.sendMessage(givenToken.value.text, channel)
-                            givenToken.value = TextFieldValue()
-                        }
-                    }
-                }) {
-                    Icon(
-                        Icons.Filled.Send,
-                        contentDescription = "send",
-                        modifier = Modifier
-                            .size(20.dp)
-                    )
-            } else {
-                IconButton(onClick = {
-                    // more
-                }) {
-                    Icon(
-                        Icons.Filled.MoreVert,
-                        contentDescription = "more",
-                        modifier = Modifier
-                            .size(20.dp)
-                    )
-                }
-            }
-
-        }
-    }
-
-    @Composable
-    @Preview(showBackground = true)
+    @Preview(showBackground = false)
     private fun GuildChannelHeader(
-        modifier: Modifier = Modifier,
-        text: String = "channel",
+        text: String = "general",
         onClick: () -> Unit = {},
-        onClickBack: () -> Unit = {},
-        onClickSearch: () -> Unit = {}
+        hidden: Boolean = false,
     ) {
-        Row(
-            modifier = modifier
-                .padding(10.dp)
-                .defaultMinSize(minHeight = 50.dp)
-                .fillMaxWidth()
-                .border(
-                    BorderStroke(1.dp, Color.Black),
-                    MaterialTheme.shapes.medium
-                )
-        ) {
-            IconButton(onClick = onClickBack) {
-                Icon(
-                    Icons.Filled.ArrowBack,
-                    contentDescription = "back",
-                    modifier = Modifier
-                        .size(20.dp)
-                )
-            }
-            TextButton(
-                onClick = onClick,
-            ) {
-                Text(text)
-            }
-            IconButton(onClick = onClickSearch) {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = "search",
-                    modifier = Modifier
-                        .size(20.dp)
-                        // TODO: put search icon at the end
-
-                )
-            }
-        }
-    }
-
-    @Composable
-    @Preview(showBackground = true)
-    private fun GuildChannelFeed(
-        channelName: String = "General",
-        channelOpened: MutableState<Boolean> = remember { mutableStateOf(false) },
-        channelMessages: MutableStateFlow<List<Message>> = MutableStateFlow(listOf(
-            Message("hello"),
-            Message("world"),
-        )),
-    ) {
-        ConstraintLayout(
+        TextButton(
+            onClick = onClick,
+            //elevation = null,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = DarkColorScheme.tertiary,
+            ),
+            contentPadding = PaddingValues(
+                end = 10.dp,
+            ),
             modifier = Modifier
-                .fillMaxHeight()
+                .height(28.dp)
                 .fillMaxWidth()
         ) {
-            val (header, messages, input) = createRefs()
-
-            GuildChannelHeader(modifier = Modifier.constrainAs(header) {
-                top.linkTo(parent.top)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-                bottom.linkTo(messages.top)
-            }, channelName, onClick = {
-                channelOpened.value = false
-            }, onClickBack = {
-                channelOpened.value = false
-            }, onClickSearch = {
-                // todo
-            })
-
-            GuildChannelMessages(modifierConstraint = Modifier.constrainAs(messages) {
-                top.linkTo(header.bottom)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            }, messages = channelMessages.collectAsState().value)
-
-            GuildChannelMessageInput(Modifier.constrainAs(input) {
-                //top.linkTo(messages.bottom)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-                bottom.linkTo(parent.bottom)
-            })
+            Icon(
+                imageVector = if (hidden) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+                contentDescription = "Guild settings",
+                tint = DarkColorScheme.tertiary,
+            )
+            Text(
+                text = text,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 5.dp)
+            )
         }
     }
 }
