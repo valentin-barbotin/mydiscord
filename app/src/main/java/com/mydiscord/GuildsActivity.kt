@@ -1,5 +1,6 @@
 package com.mydiscord
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,13 +36,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import coil.compose.AsyncImage
 import com.mydiscord.di.injectModuleDependencies
+import com.mydiscord.ui.components.DiscordNavBar
 import com.mydiscord.ui.components.GuildChannelFeed
 import com.mydiscord.ui.components.GuildChannelMessages
+import com.mydiscord.ui.components.NavItem
 import com.mydiscord.ui.theme.*
 import com.mydiscord.ui.theme.MydiscordTheme
 import com.mydiscord.viewmodel.GuildViewModel
@@ -83,6 +88,23 @@ class GuildsActivity : ComponentActivity() {
         this@GuildsActivity.guildsViewModel.updateGuilds()
     }
 
+    fun navigateTo(destination: String) {
+        when (destination) {
+            NavItem.SERVEURS.name -> {
+                val intent = Intent(this, GuildsActivity::class.java)
+                startActivity(intent)
+            }
+            NavItem.MESSAGES.name -> {
+                //val intent = Intent(this, FriendsActivity::class.java)
+                //startActivity(intent)
+            }
+            NavItem.TOI.name -> {
+                val intent = Intent(this, ProfileActivity::class.java)
+                startActivity(intent)
+            }
+        }
+    }
+
     @Composable
     @Preview(showBackground = true)
     private fun Content(
@@ -96,6 +118,19 @@ class GuildsActivity : ComponentActivity() {
         Column(
             modifier = Modifier.fillMaxSize(),
         ) {
+            val activity = (LocalContext.current as? GuildsActivity)
+            val (selectedNavItem, setSelectedNavItem) = remember { mutableStateOf(NavItem.SERVEURS) }
+            DiscordNavBar(
+                selectedNavItem = selectedNavItem,
+                onNavItemClicked = { navItem ->
+                    if (navItem != selectedNavItem) {
+                        setSelectedNavItem(navItem)
+                        activity?.navigateTo(navItem.name)
+                    } else {
+                        // reload la page
+                    }
+                }
+            )
             Row(
                 modifier = Modifier.
                     fillMaxWidth()
@@ -294,7 +329,9 @@ class GuildsActivity : ComponentActivity() {
                 text = text,
                 style = MaterialTheme.typography.headlineSmall,
                 color = DarkColorScheme.tertiary,
-                modifier = Modifier.padding(5.dp).fillMaxWidth(0.8f)
+                modifier = Modifier
+                    .padding(5.dp)
+                    .fillMaxWidth(0.8f)
             )
             IconButton(
                 onClick = onClick,

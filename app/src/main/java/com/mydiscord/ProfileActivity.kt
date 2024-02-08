@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,19 +18,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mydiscord.ui.theme.MydiscordTheme
 import com.mydiscord.viewmodel.ProfileViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.CardDefaults.elevatedCardElevation
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import coil.compose.AsyncImage
 import com.mydiscord.di.injectModuleDependencies
+import com.mydiscord.ui.components.DiscordNavBar
+import com.mydiscord.ui.components.NavItem
 import com.mydiscord.ui.components.cardModifier
-import kotlinx.coroutines.*
 
 class ProfileActivity : ComponentActivity() {
 
@@ -48,7 +48,7 @@ class ProfileActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Content(profileViewModel)
+                    Content(profileViewModel,GuildsActivity())
                 }
             }
         }
@@ -91,7 +91,7 @@ private fun About(modifier: Modifier = Modifier) {
 
 @Composable
 //@Preview(showBackground = true)
-private fun Content(profileViewModel: ProfileViewModel = viewModel()) {
+private fun Content(profileViewModel: ProfileViewModel = viewModel(), activity: GuildsActivity ) {
     val user = profileViewModel.getUser()
 
     val username = user?.username ?: "Unknown"
@@ -111,6 +111,19 @@ private fun Content(profileViewModel: ProfileViewModel = viewModel()) {
         UserActivity(Modifier)
         //Spacer(Modifier.height(2.dp))
         About(Modifier)
+
+        val (selectedNavItem, setSelectedNavItem) = remember { mutableStateOf(NavItem.SERVEURS) }
+        DiscordNavBar(
+            selectedNavItem = selectedNavItem,
+            onNavItemClicked = { navItem ->
+                if (navItem != selectedNavItem) {
+                    setSelectedNavItem(navItem)
+                    activity.navigateTo(navItem.name)
+                } else {
+                    // reload la page
+                }
+            }
+        )
     }
 }
 
