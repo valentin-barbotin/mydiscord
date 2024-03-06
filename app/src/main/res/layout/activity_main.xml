@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="#2C2F33"
+    android:orientation="horizontal"
+    android:theme="@android:style/Theme.NoTitleBar"
+    >
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/guilds_rv"
+        android:layout_width="60dp"
+        android:layout_height="match_parent"
+        android:padding="5dp"
+        tools:listitem="@layout/guild_cell_layout"
+        tools:itemCount="5"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#36393F"
+        >
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/channels_rv"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="5dp"
+            tools:listitem="@layout/message_cell_layout"
+            tools:itemCount="5"/>
+
+    </LinearLayout>
+
+
+</LinearLayout>
