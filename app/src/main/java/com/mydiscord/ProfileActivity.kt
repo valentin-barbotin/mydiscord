@@ -43,7 +43,7 @@ class ProfileActivity : ComponentActivity() {
         injectModuleDependencies(this@ProfileActivity)
 
         setContent {
-            MydiscordTheme {
+        MydiscordTheme (darkTheme = true){
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
